@@ -2,7 +2,7 @@
 
 A responsive, installable static web app for Föli in the Turku region. It shows stop departures, route timetables, live bus locations, dynamic arrival estimates and saved favorites in Finnish, English and Swedish.
 
-Current app version: **1.0.0**.
+Current app version: **1.2.0**.
 
 The Lines & routes view can filter by line and destination, then narrow a selected line's timetable by a time window at a chosen stop.
 
