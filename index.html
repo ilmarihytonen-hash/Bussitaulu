@@ -29,12 +29,13 @@
           <button class="nav-item" data-view="lines"><span class="nav-icon" data-icon="route"></span><span data-i18n="lines">Lines</span></button>
           <button class="nav-item" data-view="map"><span class="nav-icon" data-icon="map"></span><span data-i18n="liveMap">Live map</span><span class="live-dot"></span></button>
           <button class="nav-item" data-view="estimator"><span class="nav-icon" data-icon="spark"></span><span data-i18n="estimator">Smart estimate</span></button>
+          <button class="nav-item" data-view="settings"><span class="nav-icon" data-icon="settings"></span><span data-i18n="settings">Settings</span></button>
         </nav>
         <div class="sidebar-rule lower-rule"></div>
         <button class="nav-item favorites-nav" data-view="favorites"><span class="nav-icon" data-icon="star"></span><span data-i18n="favorites">Favorites</span><span class="favorite-count" id="favorite-count">0</span></button>
         <div class="sidebar-bottom">
           <div class="service-status"><span class="status-pulse"></span><span id="service-status-text" data-i18n="connecting">Connecting to Föli</span></div>
-          <p>Made for your everyday ride.<br/><a href="https://www.foli.fi/" target="_blank" rel="noreferrer">Föli Turku <span aria-hidden="true">↗</span></a><br/><small class="app-version">v1.0.0</small></p>
+          <p>Made for your everyday ride.<br/><a href="https://www.foli.fi/" target="_blank" rel="noreferrer">Föli Turku <span aria-hidden="true">↗</span></a><br/><a href="#" data-report-issue target="_blank" rel="noopener noreferrer" data-i18n="reportProblem">Report a problem <span aria-hidden="true">↗</span></a><br/><small class="app-version" data-app-version></small></p>
         </div>
       </aside>
 
@@ -48,6 +49,11 @@
             <button class="profile-button" id="location-button" aria-label="Use my location" title="Use my location"><span data-icon="locate"></span></button>
           </div>
         </header>
+        <section class="api-status-banner" id="api-status-banner" role="status" aria-live="assertive" hidden>
+          <span class="api-status-icon" data-icon="info"></span>
+          <div class="api-status-copy"><strong id="api-status-title" data-i18n="apiProblemTitle">Transit data is having trouble</strong><span id="api-status-message" data-i18n="apiProblemMessage">Live bus information may be delayed. The app is still available.</span></div>
+          <button class="secondary-button" id="api-retry-button" type="button"><span data-icon="refresh"></span><span data-i18n="retry">Retry</span></button>
+        </section>
 
         <div class="page-container">
           <section class="view active" id="view-departures" aria-labelledby="page-title">
@@ -81,19 +87,35 @@
 
           <section class="view" id="view-map" aria-labelledby="map-title">
             <div class="page-heading compact-heading"><div><p class="eyebrow" data-i18n="onTheMove">ON THE MOVE</p><h1 id="map-title" data-i18n="liveBusMap">Live bus map</h1><p class="heading-subtitle" data-i18n="liveMapCaption">See Föli buses moving across the region.</p></div><button class="secondary-button" id="map-refresh"><span data-icon="refresh"></span><span data-i18n="refresh">Refresh</span></button></div>
-            <div class="map-toolbar"><label class="map-filter"><span data-icon="search"></span><input type="search" id="map-filter" placeholder="Filter by line" data-i18n-placeholder="filterByLine" /><span data-icon="chevron"></span></label><span class="map-live-status"><i></i><span id="map-updated" data-i18n="waitingForUpdates">Waiting for updates</span></span></div>
+            <div class="map-toolbar"><label class="map-filter"><span data-icon="search"></span><input type="search" id="map-filter" placeholder="Filter by line" data-i18n-placeholder="filterByLine" /><span data-icon="chevron"></span></label><span class="map-area-status" id="map-area-status"></span><button class="secondary-button map-locate-button" id="map-locate-button" type="button"><span data-icon="locate"></span><span data-i18n="myLocation">My location</span></button><span class="map-live-status"><i></i><span id="map-updated" data-i18n="waitingForUpdates">Waiting for updates</span></span></div>
             <div class="map-frame"><div id="live-map" aria-label="Live map of Föli buses"></div><div class="map-legend"><span><i class="legend-bus"></i><span data-i18n="movingBus">Moving bus</span></span><span><i class="legend-stop"></i><span data-i18n="busStop">Bus stop</span></span></div><div class="map-loading" id="map-loading"><span class="loader"></span><span data-i18n="loadingLiveBuses">Loading live buses…</span></div></div>
             <div class="map-footnote" data-i18n="mapDataNote">Bus locations are refreshed periodically from Föli. Map tiles © OpenStreetMap contributors.</div>
           </section>
 
           <section class="view" id="view-estimator" aria-labelledby="estimator-title">
             <div class="page-heading compact-heading"><div><p class="eyebrow" data-i18n="aLittleMoreCertain">A LITTLE MORE CERTAIN</p><h1 id="estimator-title" data-i18n="smartEstimate">Smart estimate</h1><p class="heading-subtitle" data-i18n="estimateDescription">A clearer arrival estimate, with live traffic and current weather in view.</p></div></div>
-            <div class="estimate-layout"><section class="panel estimate-search-panel"><div class="panel-heading"><div><p class="section-kicker" data-i18n="firstChoose">FIRST, CHOOSE</p><h2 data-i18n="yourStop">Your stop</h2></div></div><div class="search-input-wrap"><span class="search-glass" data-icon="pin"></span><input id="estimate-search" type="search" autocomplete="off" placeholder="Find a stop" data-i18n-placeholder="findStop" /><button class="clear-search" id="clear-estimate-search" aria-label="Clear search" hidden>×</button></div><div class="search-results inline-results" id="estimate-results" role="listbox" hidden></div><div class="selected-stop-card" id="estimate-selected" hidden></div><div class="weather-detail" id="weather-detail"><span class="weather-detail-icon">☁</span><span><strong data-i18n="weatherLoading">Weather loading…</strong><small data-i18n="turkuWeather">Current conditions in Turku</small></span></div></section><section class="panel estimate-results-panel"><div class="panel-heading"><div><p class="section-kicker" data-i18n="yourNextBuses">YOUR NEXT BUSES</p><h2 data-i18n="weatherAware">Weather-aware arrivals</h2></div><span class="estimate-badge"><span data-icon="spark"></span><span data-i18n="estimated">ESTIMATED</span></span></div><div id="estimate-list"><div class="empty-state"><span class="empty-icon" data-icon="pin"></span><strong data-i18n="chooseStopToEstimate">Choose a stop to see estimates</strong><small data-i18n="trafficWeatherInputs">Live vehicle data and local weather are used when available.</small></div></div><div class="estimate-explainer"><span data-icon="info"></span><span data-i18n="estimateDisclaimer">Föli’s live ETA already reflects vehicle position and traffic. Our extra weather adjustment is an estimate, not an official prediction.</span></div></section></div>
+            <div class="estimate-layout"><section class="panel estimate-search-panel"><div class="panel-heading"><div><p class="section-kicker" data-i18n="firstChoose">FIRST, CHOOSE</p><h2 data-i18n="yourStop">Your stop</h2></div></div><button class="secondary-button estimate-choose-button" id="estimate-choose-stop"><span data-icon="pin"></span><span id="estimate-choose-stop-label" data-i18n="chooseStop">Choose a stop</span></button><div class="search-input-wrap estimate-stop-picker" id="estimate-stop-picker" hidden><span class="search-glass" data-icon="search"></span><input id="estimate-search" type="search" autocomplete="off" placeholder="Find a stop" data-i18n-placeholder="findStop" /><button class="clear-search" id="clear-estimate-search" aria-label="Clear search" hidden>×</button></div><div class="search-results inline-results" id="estimate-results" role="listbox" hidden></div><div class="selected-stop-card" id="estimate-selected" hidden></div><div class="weather-detail" id="weather-detail"><span class="weather-detail-icon">☁</span><span><strong data-i18n="weatherLoading">Weather loading…</strong><small data-i18n="turkuWeather">Current conditions in Turku</small></span></div></section><section class="panel estimate-results-panel"><div class="panel-heading"><div><p class="section-kicker" data-i18n="yourNextBuses">YOUR NEXT BUSES</p><h2 data-i18n="weatherAware">Weather-aware arrivals</h2></div><span class="estimate-badge"><span data-icon="spark"></span><span data-i18n="estimated">ESTIMATED</span></span></div><div id="estimate-list"><div class="empty-state"><span class="empty-icon" data-icon="pin"></span><strong data-i18n="chooseStopToEstimate">Choose a stop to see estimates</strong><small data-i18n="trafficWeatherInputs">Live vehicle data and local weather are used when available.</small></div></div><div class="estimate-explainer"><span data-icon="info"></span><span data-i18n="estimateDisclaimer">Föli’s live ETA already reflects vehicle position and traffic. Our extra weather adjustment is an estimate, not an official prediction.</span></div></section></div>
           </section>
 
           <section class="view" id="view-favorites" aria-labelledby="favorites-title">
             <div class="page-heading compact-heading"><div><p class="eyebrow" data-i18n="yourShortcuts">YOUR SHORTCUTS</p><h1 id="favorites-title" data-i18n="favorites">Favorites</h1><p class="heading-subtitle" data-i18n="favoritesDescription">The stops and lines you want close at hand.</p></div></div>
             <div class="favorite-page-list" id="favorite-page-list"></div>
+          </section>
+          <section class="view" id="view-settings" aria-labelledby="settings-title">
+            <div class="page-heading compact-heading"><div><p class="eyebrow" data-i18n="settings">SETTINGS</p><h1 id="settings-title" data-i18n="settingsTitle">Settings</h1><p class="heading-subtitle" data-i18n="settingsDescription">Adjust the app and review its terms and licence.</p></div></div>
+            <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+              <button class="settings-tab active" id="settings-tab-preferences" role="tab" aria-selected="true" aria-controls="settings-panel-preferences" data-settings-tab="preferences" data-i18n="preferences">Preferences</button>
+              <button class="settings-tab" id="settings-tab-terms" role="tab" aria-selected="false" aria-controls="settings-panel-terms" data-settings-tab="terms" data-i18n="termsTab">Terms of Use</button>
+              <button class="settings-tab" id="settings-tab-license" role="tab" aria-selected="false" aria-controls="settings-panel-license" data-settings-tab="license" data-i18n="license">Licence</button>
+            </div>
+            <section class="settings-panel panel" id="settings-panel-preferences" role="tabpanel" aria-labelledby="settings-tab-preferences">
+              <div class="settings-control"><div><strong data-i18n="uiScale">Interface scale</strong><small data-i18n="uiScaleDescription">Change the size of the app interface.</small></div><label class="settings-select-label"><span class="sr-only" data-i18n="uiScale">Interface scale</span><select id="ui-scale-select"><option value="0.85">85%</option><option value="0.9">90%</option><option value="0.95">95%</option><option value="1">100%</option><option value="1.05">105%</option><option value="1.1">110%</option><option value="1.15">115%</option></select></label></div>
+              <div class="settings-control"><div><strong data-i18n="nearbyRadius">Nearby area</strong><small data-i18n="nearbyRadiusDescription">Limit nearby buses and stops; favorites remain visible.</small></div><label class="settings-select-label"><span class="sr-only" data-i18n="nearbyRadius">Nearby area</span><select id="nearby-radius-select"></select></label></div>
+              <div class="settings-control"><div><strong data-i18n="locationSettings">Location</strong><small data-i18n="locationSettingsDescription">Choose whether Bussitaulu can use your location when you ask it to.</small></div><label class="settings-toggle"><input type="checkbox" id="location-enabled" /><span data-i18n="allowLocation">Allow location when requested</span></label></div>
+              <div class="settings-location-actions"><span id="location-setting-status" data-i18n="locationNotRequested">Location has not been requested.</span><button class="secondary-button" id="settings-locate-button" type="button"><span data-icon="locate"></span><span data-i18n="useMyLocation">Use my location</span></button><a class="report-issue-link" href="#" data-report-issue target="_blank" rel="noopener noreferrer"><span data-i18n="reportProblem">Report a problem</span><span aria-hidden="true">↗</span></a></div>
+            </section>
+            <section class="settings-panel panel legal-document-panel" id="settings-panel-terms" role="tabpanel" aria-labelledby="settings-tab-terms" hidden><div class="legal-document-heading"><h2 data-i18n="termsTab">Terms of Use</h2><a href="./TERMS.md" target="_blank" rel="noopener noreferrer" data-i18n="openDocument">Open document</a></div><pre id="settings-terms-content" class="legal-document" data-document="./TERMS.md"></pre></section>
+            <section class="settings-panel panel legal-document-panel" id="settings-panel-license" role="tabpanel" aria-labelledby="settings-tab-license" hidden><div class="legal-document-heading"><h2 data-i18n="license">Licence</h2><a href="./LICENSE" target="_blank" rel="noopener noreferrer" data-i18n="openDocument">Open document</a></div><pre id="settings-license-content" class="legal-document" data-document="./LICENSE"></pre></section>
           </section>
           <footer class="app-legal-note"><span data-i18n="appLegalNotice">Copyright © Bussitaulu contributors. The software is provided without warranty under GNU GPL v3.</span> <a href="./LICENSE" data-i18n="gplLink">GNU GPL v3</a></footer>
         </div>
@@ -105,6 +127,7 @@
         <button class="mobile-nav-item" data-view="map"><span data-icon="map"></span><small data-i18n="liveMap">Live map</small></button>
         <button class="mobile-nav-item" data-view="estimator"><span data-icon="spark"></span><small data-i18n="estimator">Estimate</small></button>
         <button class="mobile-nav-item" data-view="favorites"><span data-icon="star"></span><small data-i18n="favorites">Favorites</small></button>
+        <button class="mobile-nav-item" data-view="settings"><span data-icon="settings"></span><small data-i18n="settings">Settings</small></button>
       </nav>
     </div>
 
@@ -129,6 +152,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="./app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>

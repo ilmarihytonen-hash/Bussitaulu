@@ -1,173 +1,21 @@
+import { API, createApiClient, fetchWeather, normalizeStops, normalizeVehicles } from "./modules/api.js";
+import { APP_CONFIG } from "./modules/config.js";
+import { createMapController } from "./modules/map.js";
+import { icons, translations } from "./modules/i18n.js";
+import { initializeSettings } from "./modules/settings.js";
+
 "use strict";
 
 (() => {
-  const API = "https://data.foli.fi";
-  const WEATHER = "https://api.open-meteo.com/v1/forecast";
-  const TURKU = { lat: 60.4518, lon: 22.2666 };
+  const TURKU = APP_CONFIG.defaultCenter;
   const LOCALE_KEY = "bussitaulu-language";
   const FAVORITES_KEY = "bussitaulu-favorites";
   const HISTORY_KEY = "bussitaulu-arrival-history-v1";
   const TERMS_KEY = "bussitaulu-terms-version";
-  const TERMS_VERSION = "1";
-  const CACHE_PREFIX = "bussitaulu-cache:";
-  const CACHE_TTL = 6 * 60 * 60 * 1000;
+  const TERMS_VERSION = APP_CONFIG.termsVersion;
   const HISTORY_DAYS = 30;
-  const SIGNAL_CACHE_TTL = 24 * 60 * 60 * 1000;
-  const SIGNAL_ENDPOINT = "https://overpass-api.de/api/interpreter";
-  const translations = {
-    fi: {
-      workspace: "LIIKENTEESSÄ", departures: "Lähdöt", lines: "Linjat", liveMap: "Reaaliaikakartta", estimator: "Saapumisarvio", favorites: "Suosikit", connecting: "Yhdistetään Föliin", turkuRegion: "Turun seutu",
-      yourCity: "KAUPUNKI LIIKKEESSÄ", whereNext: "Minne olet matkalla?", findDepartures: "Etsi pysäkki ja katso seuraavat lähdöt.", checkingWeather: "Haetaan säätä", byStop: "Pysäkin mukaan", byLine: "Linjalla", searchHint: "Kokeile tuttua paikkaa tai pysäkkinumeroa", quickAccess: "PIKAVALINNAT", yourFavorites: "Suosikkisi", seeAll: "Näytä kaikki", aroundYou: "LÄHELLÄSI", nearbyStops: "Lähipysäkit", loadingStops: "Haetaan lähipysäkkejä…", rightNow: "JUURI NYT", liveAroundTown: "Bussit liikkeellä", live: "NYT", busesOnTheMove: "bussia liikenteessä", viewMap: "Avaa kartta", sourceCredit: "Liikennetiedot: Fölin avoin data (CC BY 4.0). Sää: Open-Meteo.",
-      planYourRide: "SUUNNITTELE MATKASI", linesAndRoutes: "Linjat ja reitit", chooseLine: "Valitse linja nähdäksesi sen aikataulun ja reaaliaikaiset bussit.", searchLine: "Hae linjanumerolla tai määränpäällä", onTheMove: "LIIKKEELLÄ", liveBusMap: "Bussit kartalla", liveMapCaption: "Seuraa Fölin busseja Turun seudulla.", refresh: "Päivitä", filterByLine: "Rajaa linjan mukaan", waitingForUpdates: "Odotetaan päivityksiä", movingBus: "Bussi", busStop: "Pysäkki", loadingLiveBuses: "Haetaan busseja…", mapDataNote: "Bussien sijainti päivittyy säännöllisesti Fölin tiedoista. Kartta © OpenStreetMap.", aLittleMoreCertain: "VARMEMMIN PERILLE", smartEstimate: "Saapumisarvio", estimateDescription: "Selkeämpi arvio saapumisesta: reaaliaikainen liikenne ja sää huomioiden.", firstChoose: "ALOITA VALITSEMALLA", yourStop: "Pysäkkisi", findStop: "Etsi pysäkki", weatherLoading: "Haetaan säätä…", turkuWeather: "Turun tämänhetkinen sää", yourNextBuses: "SEURAAVAT BUSSIT", weatherAware: "Sää huomioitu arvio", estimated: "ARVIO", chooseStopToEstimate: "Valitse pysäkki nähdäksesi arviot", trafficWeatherInputs: "Hyödynnämme saatavilla olevia reaaliaikaisia bussitietoja ja paikallista säätä.", estimateDisclaimer: "Fölin reaaliaikainen arvio huomioi jo bussin sijainnin ja liikenteen. Sääkorjaus on suuntaa antava lisäarvio, ei Fölin virallinen ennuste.", yourShortcuts: "SINUN PIKAVALINTASI", favoritesDescription: "Pysäkit ja linjat, jotka haluat pitää lähellä.", home: "Koti", language: "Kieli",
-      stopPlaceholder: "Hae pysäkkiä tai numeroa", searchStops: "Hae pysäkkiä", nearbyLoading: "Haetaan pysäkkejä…", noNearby: "Lähipysäkkejä ei löytynyt.", noFavorites: "Ei vielä suosikkeja", addFavoriteHint: "Lisää pysäkki tai linja suosikkeihin tähdestä.", stop: "pysäkki", min: "min", now: "Nyt", minutes: "min", scheduled: "Aikataulu", liveArrival: "Reaaliaikainen arvio", noDepartures: "Ei tulevia lähtöjä löytynyt.", departuresError: "Lähtötietojen haku epäonnistui.", comingSoon: "Saapuva bussi", noLiveBus: "Ei reaaliaikaista bussitietoa saatavilla.", addFavorite: "Lisää suosikiksi", removeFavorite: "Poista suosikeista", line: "Linja", destination: "Määränpää", liveBuses: "Reaaliaikaiset bussit", noLiveLine: "Tällä linjalla ei näy juuri nyt busseja.", loadingLine: "Haetaan linjaa…", favoriteSaved: "Lisätty suosikkeihin", favoriteRemoved: "Poistettu suosikeista", updated: "Päivitetty", weatherClear: "Selkeää", weatherCloudy: "Pilvistä", weatherRain: "Sadetta", weatherSnow: "Lumisadetta", weatherStorm: "Ukkosta", weatherFog: "Sumua", weatherAdjustment: "Sääarvio", weatherAdded: "sää voi hidastaa noin", weatherNoImpact: "Ei merkittävää säävaikutusta", estimatedArrival: "Arvioitu saapuminen", busArriving: "Lähestyvä suosikkibussi", viewStop: "Avaa pysäkki", routeNotFound: "Linjaa ei löytynyt.", favoritesEmpty: "Suosikkeja ei vielä ole.", errorTitle: "Tietojen lataus epäonnistui", locateDenied: "Sijaintia ei voitu hakea. Tarkista selaimen sijaintilupa.", stopSearchEmpty: "Ei vastaavia pysäkkejä.", routeSearchEmpty: "Ei vastaavia linjoja.", serviceActive: "Föli-yhteys käytössä", serviceLimited: "Fölin reaaliaikapalvelu ei ole käytettävissä.", weatherUnavailable: "Säätietoja ei juuri nyt saada.", searchStop: "Etsi pysäkki", stopTimetable: "Pysäkin aikataulu", stopDetails: "LÄHDÖT", arrival: "Saapuminen", clearWeather: "Tyyni sää", caution: "Varovainen arvio", mapLinesFilter: "Suodata kartan bussit linjan mukaan",       stopId: "Pysäkki", weatherNote: "Sääarvio vaikuttaa vain tämän sovelluksen omaan arvioon.", lineTimetable: "Linjakohtaiset lähdöt pysäkillä", lineTimetableHint: "Valitse pysäkki nähdäksesi tämän linjan aikataulun.", findStopOnLine: "Etsi tämän linjan pysäkki", chooseStopForLine: "Hae pysäkki nähdäksesi linjan lähdöt.", loadingLineTimetable: "Haetaan aikataulua…", noLineDeparturesAtStop: "Tälle linjalle ei löytynyt lähtöjä valitulta pysäkiltä."
-    },
-    en: {
-      workspace: "ON THE MOVE", departures: "Departures", lines: "Lines", liveMap: "Live map", estimator: "Smart estimate", favorites: "Favorites", connecting: "Connecting to Föli", turkuRegion: "Turku region",
-      yourCity: "YOUR CITY, IN MOTION", whereNext: "Where are you headed?", findDepartures: "Find a stop and see what's coming next.", checkingWeather: "Checking weather", byStop: "By stop", byLine: "By line", searchHint: "Try a familiar place or stop number", quickAccess: "QUICK ACCESS", yourFavorites: "Your favorites", seeAll: "See all", aroundYou: "AROUND YOU", nearbyStops: "Nearby stops", loadingStops: "Loading nearby stops…", rightNow: "RIGHT NOW", liveAroundTown: "Live around town", live: "LIVE", busesOnTheMove: "buses on the move", viewMap: "View map", sourceCredit: "Transit data: Föli open data (CC BY 4.0). Weather: Open-Meteo.",
-      planYourRide: "PLAN YOUR RIDE", linesAndRoutes: "Lines & routes", chooseLine: "Choose a line to view its timetable and live buses.", searchLine: "Search line number or destination", onTheMove: "ON THE MOVE", liveBusMap: "Live bus map", liveMapCaption: "See Föli buses moving across the region.", refresh: "Refresh", filterByLine: "Filter by line", waitingForUpdates: "Waiting for updates", movingBus: "Moving bus", busStop: "Bus stop", loadingLiveBuses: "Loading live buses…", mapDataNote: "Bus locations refresh periodically from Föli. Map tiles © OpenStreetMap contributors.", aLittleMoreCertain: "A LITTLE MORE CERTAIN", smartEstimate: "Smart estimate", estimateDescription: "A clearer arrival estimate, with live traffic and current weather in view.", firstChoose: "FIRST, CHOOSE", yourStop: "Your stop", findStop: "Find a stop", weatherLoading: "Weather loading…", turkuWeather: "Current conditions in Turku", yourNextBuses: "YOUR NEXT BUSES", weatherAware: "Weather-aware arrivals", estimated: "ESTIMATED", chooseStopToEstimate: "Choose a stop to see estimates", trafficWeatherInputs: "Live vehicle data and local weather are used when available.", estimateDisclaimer: "Föli’s live ETA already reflects vehicle position and traffic. Our extra weather adjustment is approximate, not an official prediction.", yourShortcuts: "YOUR SHORTCUTS", favoritesDescription: "The stops and lines you want close at hand.", home: "Home", language: "Language",
-      stopPlaceholder: "Search a stop or stop number", searchStops: "Search stops", nearbyLoading: "Loading nearby stops…", noNearby: "No nearby stops found.", stop: "stop", min: "min", now: "Now", minutes: "min", scheduled: "Scheduled", liveArrival: "Live estimate", noDepartures: "No upcoming departures found.", departuresError: "Could not load departures.", comingSoon: "A favorite bus is approaching", noLiveBus: "No live bus data available.", addFavorite: "Add to favorites", removeFavorite: "Remove from favorites", line: "Line", destination: "Destination", liveBuses: "Live buses", noLiveLine: "No buses on this line are visible right now.", loadingLine: "Loading line…", favoriteSaved: "Added to favorites", favoriteRemoved: "Removed from favorites", updated: "Updated", weatherClear: "Clear", weatherCloudy: "Cloudy", weatherRain: "Rain", weatherSnow: "Snow", weatherStorm: "Thunderstorm", weatherFog: "Fog", weatherAdjustment: "Weather estimate", weatherAdded: "weather may add about", weatherNoImpact: "No significant weather impact", estimatedArrival: "Estimated arrival", busArriving: "Favorite bus arriving", viewStop: "Open stop", routeNotFound: "Line not found.", favoritesEmpty: "No favorites yet.", errorTitle: "Could not load data", locateDenied: "Could not get your location. Check your browser location permission.", stopSearchEmpty: "No matching stops.", routeSearchEmpty: "No matching lines.", serviceActive: "Föli connection active", serviceLimited: "Föli live service is currently unavailable.", weatherUnavailable: "Weather data is not available right now.",       searchStop: "Search for a stop", stopTimetable: "Stop timetable", stopDetails: "DEPARTURES", arrival: "Arrival", clearWeather: "Clear conditions", caution: "Cautious estimate", mapLinesFilter: "Filter map buses by line", stopId: "Stop", weatherNote: "The weather estimate only affects this app's own estimate.", lineTimetable: "Line departures at a stop", lineTimetableHint: "Choose a stop to see this line's timetable.", findStopOnLine: "Find a stop on this line", chooseStopForLine: "Search for a stop to view this line's departures.", loadingLineTimetable: "Loading timetable…", noLineDeparturesAtStop: "No departures for this line were found at that stop."
-    },
-    sv: {
-      workspace: "PÅ VÄG", departures: "Avgångar", lines: "Linjer", liveMap: "Livekarta", estimator: "Smart uppskattning", favorites: "Favoriter", connecting: "Ansluter till Föli", turkuRegion: "Åboregionen",
-      yourCity: "DIN STAD I RÖRELSE", whereNext: "Vart är du på väg?", findDepartures: "Hitta en hållplats och se nästa avgångar.", checkingWeather: "Hämtar väder", byStop: "Vid hållplats", byLine: "Per linje", searchHint: "Sök på en bekant plats eller ett hållplatsnummer", quickAccess: "SNABBVAL", yourFavorites: "Dina favoriter", seeAll: "Visa alla", aroundYou: "I NÄRHETEN", nearbyStops: "Närliggande hållplatser", loadingStops: "Hämtar hållplatser…", rightNow: "JUST NU", liveAroundTown: "Bussar i rörelse", live: "NU", busesOnTheMove: "bussar i trafik", viewMap: "Visa karta", sourceCredit: "Trafikdata: Föli öppna data (CC BY 4.0). Väder: Open-Meteo.",
-      planYourRide: "PLANERA RESAN", linesAndRoutes: "Linjer och rutter", chooseLine: "Välj en linje för tidtabell och bussar i realtid.", searchLine: "Sök linjenummer eller destination", onTheMove: "I RÖRELSE", liveBusMap: "Bussar på kartan", liveMapCaption: "Följ Föli-bussar i Åboregionen.", refresh: "Uppdatera", filterByLine: "Filtrera efter linje", waitingForUpdates: "Väntar på uppdatering", movingBus: "Buss", busStop: "Hållplats", loadingLiveBuses: "Hämtar bussar…", mapDataNote: "Bussarnas position uppdateras regelbundet från Föli. Karta © OpenStreetMap.", aLittleMoreCertain: "LITE SÄKRARE FRAMME", smartEstimate: "Ankomstuppskattning", estimateDescription: "En tydligare ankomstuppskattning med realtidstrafik och aktuellt väder.", firstChoose: "BÖRJA MED ATT VÄLJA", yourStop: "Din hållplats", findStop: "Sök hållplats", weatherLoading: "Hämtar väder…", turkuWeather: "Aktuellt väder i Åbo", yourNextBuses: "NÄSTA BUSSAR", weatherAware: "Väderjusterad uppskattning", estimated: "UPPSKATTNING", chooseStopToEstimate: "Välj en hållplats för att se uppskattningar", trafficWeatherInputs: "Vi använder bussdata i realtid och lokalt väder när det finns tillgängligt.", estimateDisclaimer: "Fölis liveprognos beaktar redan bussens position och trafiken. Vår extra väderjustering är ungefärlig, inte en officiell prognos.", yourShortcuts: "DINA SNABBVAL", favoritesDescription: "Hållplatser och linjer nära till hands.", home: "Hem", language: "Språk",
-      stopPlaceholder: "Sök hållplats eller nummer", searchStops: "Sök hållplatser", nearbyLoading: "Hämtar hållplatser…", noNearby: "Inga hållplatser hittades i närheten.", stop: "hållplats", min: "min", now: "Nu", minutes: "min", scheduled: "Tidtabell", liveArrival: "Liveprognos", noDepartures: "Inga kommande avgångar hittades.", departuresError: "Avgångarna kunde inte hämtas.", comingSoon: "En favoritbuss närmar sig", noLiveBus: "Ingen realtidsinformation tillgänglig.", addFavorite: "Lägg till favorit", removeFavorite: "Ta bort favorit", line: "Linje", destination: "Destination", liveBuses: "Bussar i realtid", noLiveLine: "Inga bussar på linjen syns just nu.", loadingLine: "Hämtar linje…", favoriteSaved: "Tillagd bland favoriter", favoriteRemoved: "Borttagen från favoriter", updated: "Uppdaterad", weatherClear: "Klart", weatherCloudy: "Molnigt", weatherRain: "Regn", weatherSnow: "Snöfall", weatherStorm: "Åska", weatherFog: "Dimma", weatherAdjustment: "Väderjustering", weatherAdded: "vädret kan lägga till ca", weatherNoImpact: "Ingen betydande väderpåverkan", estimatedArrival: "Uppskattad ankomst", busArriving: "Favoritbuss på väg", viewStop: "Visa hållplats", routeNotFound: "Linjen hittades inte.", favoritesEmpty: "Inga favoriter ännu.", errorTitle: "Informationen kunde inte hämtas", locateDenied: "Platsen kunde inte hämtas. Kontrollera webbläsarens platsbehörighet.", stopSearchEmpty: "Inga hållplatser hittades.", routeSearchEmpty: "Inga linjer hittades.", serviceActive: "Ansluten till Föli", serviceLimited: "Fölis realtidstjänst är inte tillgänglig just nu.", weatherUnavailable: "Väderinformation är inte tillgänglig just nu.",       searchStop: "Sök efter en hållplats", stopTimetable: "Hållplatsens tidtabell", stopDetails: "AVGÅNGAR", arrival: "Ankomst", clearWeather: "Klart väder", caution: "Försiktig uppskattning", mapLinesFilter: "Filtrera kartans bussar efter linje", stopId: "Hållplats", weatherNote: "Väderuppskattningen påverkar endast appens egen uppskattning.", lineTimetable: "Linjeavgångar vid hållplats", lineTimetableHint: "Välj en hållplats för att se linjens tidtabell.", findStopOnLine: "Hitta en hållplats längs linjen", chooseStopForLine: "Sök en hållplats för att visa linjens avgångar.", loadingLineTimetable: "Hämtar tidtabell…", noLineDeparturesAtStop: "Inga avgångar för linjen hittades vid hållplatsen."
-    }
-  };
-  Object.assign(translations.fi, {
-    termsTitle: "Tervetuloa Bussitauluun",
-    termsIntro: "Lue käyttöehdot ennen sovelluksen käyttöä. Jatkamalla hyväksyt nämä ehdot.",
-    termsUnofficial: "Bussitaulu on epävirallinen sovellus, eikä se ole Fölin ylläpitämä tai hyväksymä.",
-    termsEstimates: "Aikataulu-, sijainti- ja saapumistiedot voivat olla viivästyneitä tai virheellisiä. Arviot ovat suuntaa antavia eivätkä korvaa liikennöitsijän tietoja.",
-    termsPrivacy: "Suosikit, kielivalinta ja saapumishistoria tallennetaan tähän selaimeen. Sijaintia käytetään vain selaimen luvalla lähipysäkkien hakuun ja paikallisen sään hakemiseen. Tietoja haetaan Fölin, Open-Meteon ja OpenStreetMapin palveluista.",
-    termsThirdParty: "Ulkopuoliset palvelut ja niiden käyttöehdot sekä aineistolisenssit koskevat niiden tarjoamia tietoja.",
-    termsAcceptLabel: "Olen lukenut ja hyväksyn käyttöehdot.",
-    termsAcceptButton: "Hyväksy ja jatka",
-    termsLink: "Lue täydet käyttöehdot",
-    termsLicenseLink: "Ohjelmiston lisenssi: GNU GPL v3",
-    termsStorageWarning: "Hyväksyntää ei voitu tallentaa. Sinulta kysytään uudelleen seuraavalla käyntikerralla.",
-    termsLanguage: "Kieli",
-    termsUpdated: "Jos käyttöehtoja päivitetään, pyydämme hyväksyntää uudelleen.",
-    appLegalNotice: "Copyright © Bussitaulu contributors. Ohjelmisto toimitetaan ilman takuuta GNU GPL v3 -lisenssillä.",
-    gplLink: "GNU GPL v3",
-    filterLinesTitle: "Rajaa linjoja",
-    lineFilterLabel: "Linja",
-    allLines: "Kaikki linjat",
-    filterByDestination: "Määränpää",
-    destinationPlaceholder: "Hae määränpäätä",
-    departureTimeRange: "Lähtöaika valitulta pysäkiltä",
-    fromTime: "Alkaen",
-    untilTime: "Asti",
-    timeFilterHint: "Valitse ensin pysäkki. Aikarajaus koskee saatavilla olevia lähiaikojen lähtöjä.",
-    clearTimeFilter: "Tyhjennä ajat",
-    noDeparturesInWindow: "Tällä aikavälillä ei ole tulevia lähtöjä.",
-    sourceCredit: "Liikennetiedot: Fölin avoin data (CC BY 4.0). Sää: Open-Meteo. Liikennevalot: OpenStreetMap-yhteisö / Overpass API.",
-    estimateDisclaimer: "Aikataulu ja Fölin GPS-pohjainen live-arvio näytetään rinnakkain. Oma suuntaa antava arvio huomioi GPS-nopeuden, Fölin ruuhkamerkinnän, sään, likimääräiset OpenStreetMap-liikennevalot ja tällä laitteella tallennetut aiemmat toteutuneet saapumiset.",
-    scheduledTime: "Aikataulu", liveTime: "Fölin live-arvio", smartTime: "Oma dynaaminen arvio", estimateFactors: "Arvion perusteet",
-    busSpeed: "GPS-nopeus", traffic: "Liikenne", trafficHeavy: "Föli ilmoittaa ruuhkaa (+2 min)", trafficNormal: "Ei ruuhkailmoitusta",
-    signalCount: "Liikennevaloja reitillä", signalUnavailable: "Liikennevalotietoa ei saatavilla", weatherFactor: "Sää", historyFactor: "Aiemmat toteutuneet saapumiset",
-    todayAverage: "Tämän päivän keskiarvo", previousDaysAverage: "Edellisten päivien keskiarvo", observedArrivals: "toteutunutta saapumista",
-    noTodayHistory: "Ei vielä toteutuneita saapumisia tänään.", noPreviousHistory: "Aiemmilta päiviltä ei vielä ole havaintoja.",
-    earlyBy: "etua", lateBy: "myöhässä", onTimeBy: "ajallaan", historyLocalNote: "Oppiminen tallentuu vain tälle selaimelle ja laitteelle. Päivän havainnot nollautuvat Helsingin keskiyöllä; päiväkohtaiset yhteenvedot säilyvät 30 päivää.",
-    estimateModelNote: "Nopeus lasketaan peräkkäisistä GPS-havainnoista. Ruuhka-arvio tulee Fölin reaaliaikadatasta. Liikennevalot ja sää ovat suuntaa antavia.",
-    noLiveEstimate: "Reaaliaikaista saapumisarviota ei ole saatavilla", collectHistory: "Toteutuneet saapumiset kerryttävät henkilökohtaista päiväkohtaista arviota.",
-    speedUnavailable: "nopeustieto odottaa GPS-havaintoja", minuteValue: "min", signalSource: "OpenStreetMap (Overpass API)", weatherBuffer: "säävara", congestionBuffer: "ruuhkavara",
-    previousArrivalAdjustment: "Aiempiin saapumisiin perustuva korjaus", vsTimetable: "aikatauluun verrattuna", historyStorageUnavailable: "Päivähistoriaa ei voitu tallentaa tähän selaimeen."
-  });
-  Object.assign(translations.en, {
-    termsTitle: "Welcome to Bussitaulu",
-    termsIntro: "Please review these terms before using the app. Continuing means you agree to them.",
-    termsUnofficial: "Bussitaulu is an independent app and is not operated or endorsed by Föli.",
-    termsEstimates: "Timetables, locations and arrival information may be delayed or inaccurate. Estimates are approximate and do not replace the operator's information.",
-    termsPrivacy: "Favorites, language choice and arrival history are stored in this browser. With browser permission, location is used to find nearby stops and fetch local weather. Data is requested from Föli, Open-Meteo and OpenStreetMap services.",
-    termsThirdParty: "Third-party services and their terms and data licences apply to the information they provide.",
-    termsAcceptLabel: "I have read and agree to the Terms of Use.",
-    termsAcceptButton: "Agree and continue",
-    termsLink: "Read the full Terms of Use",
-    termsLicenseLink: "Software licence: GNU GPL v3",
-    termsStorageWarning: "Your agreement could not be saved. You will be asked again next time.",
-    termsLanguage: "Language",
-    termsUpdated: "If these terms are updated, you will be asked to agree again.",
-    appLegalNotice: "Copyright © Bussitaulu contributors. This software is provided without warranty under GNU GPL v3.",
-    gplLink: "GNU GPL v3",
-    filterLinesTitle: "Filter lines",
-    lineFilterLabel: "Line",
-    allLines: "All lines",
-    filterByDestination: "Destination",
-    destinationPlaceholder: "Search destination",
-    departureTimeRange: "Departure time at selected stop",
-    fromTime: "From",
-    untilTime: "Until",
-    timeFilterHint: "Choose a stop first. The filter applies to upcoming departures currently available for that stop.",
-    clearTimeFilter: "Clear times",
-    noDeparturesInWindow: "No upcoming departures in this time range.",
-    sourceCredit: "Transit data: Föli open data (CC BY 4.0). Weather: Open-Meteo. Traffic signals: OpenStreetMap contributors / Overpass API.",
-    estimateDisclaimer: "The timetable and Föli's GPS-based live ETA are shown side by side. Our approximate estimate also uses GPS speed, Föli's congestion flag, weather, approximate OpenStreetMap traffic signals and previous completed arrivals stored on this device.",
-    scheduledTime: "Timetabled", liveTime: "Föli live ETA", smartTime: "Our dynamic estimate", estimateFactors: "Estimate factors",
-    busSpeed: "GPS speed", traffic: "Traffic", trafficHeavy: "Föli reports congestion (+2 min)", trafficNormal: "No congestion reported",
-    signalCount: "Traffic signals on segment", signalUnavailable: "Traffic-signal data unavailable", weatherFactor: "Weather", historyFactor: "Previous observed arrivals",
-    todayAverage: "Today's average", previousDaysAverage: "Previous days' average", observedArrivals: "observed arrivals",
-    noTodayHistory: "No completed arrivals observed today yet.", noPreviousHistory: "No observations from previous days yet.",
-    earlyBy: "early", lateBy: "late", onTimeBy: "on time", historyLocalNote: "Learning is stored only in this browser and device. Today's observations reset at Helsinki midnight; daily summaries are kept for 30 days.",
-    estimateModelNote: "Speed comes from successive GPS observations. Congestion comes from Föli live data. Traffic-light and weather effects are approximate.",
-    noLiveEstimate: "No live arrival estimate available", collectHistory: "Observed arrivals build your day-by-day estimate over time.",
-    speedUnavailable: "waiting for GPS speed observations", minuteValue: "min", signalSource: "OpenStreetMap (Overpass API)", weatherBuffer: "weather buffer", congestionBuffer: "congestion buffer",
-    previousArrivalAdjustment: "Previous-arrival adjustment", vsTimetable: "vs timetable", historyStorageUnavailable: "Daily history could not be saved in this browser."
-  });
-  Object.assign(translations.sv, {
-    termsTitle: "Välkommen till Bussitaulu",
-    termsIntro: "Läs användarvillkoren innan du använder appen. Genom att fortsätta godkänner du dem.",
-    termsUnofficial: "Bussitaulu är en fristående app och drivs eller stöds inte av Föli.",
-    termsEstimates: "Tidtabeller, positioner och ankomsttider kan vara fördröjda eller felaktiga. Uppskattningarna är vägledande och ersätter inte trafikoperatörens information.",
-    termsPrivacy: "Favoriter, språkval och ankomsthistorik sparas i den här webbläsaren. Med webbläsarens tillstånd används platsen för att hitta närliggande hållplatser och hämta lokalt väder. Data hämtas från Fölis, Open-Meteos och OpenStreetMaps tjänster.",
-    termsThirdParty: "Tredjepartstjänsternas villkor och datalicenser gäller för informationen de tillhandahåller.",
-    termsAcceptLabel: "Jag har läst och godkänner användarvillkoren.",
-    termsAcceptButton: "Godkänn och fortsätt",
-    termsLink: "Läs de fullständiga användarvillkoren",
-    termsLicenseLink: "Programvarulicens: GNU GPL v3",
-    termsStorageWarning: "Ditt godkännande kunde inte sparas. Du blir tillfrågad igen nästa gång.",
-    termsLanguage: "Språk",
-    termsUpdated: "Om villkoren uppdateras blir du ombedd att godkänna dem igen.",
-    appLegalNotice: "Copyright © Bussitaulu contributors. Programvaran tillhandahålls utan garanti under GNU GPL v3.",
-    gplLink: "GNU GPL v3",
-    filterLinesTitle: "Filtrera linjer",
-    lineFilterLabel: "Linje",
-    allLines: "Alla linjer",
-    filterByDestination: "Destination",
-    destinationPlaceholder: "Sök destination",
-    departureTimeRange: "Avgångstid vid vald hållplats",
-    fromTime: "Från",
-    untilTime: "Till",
-    timeFilterHint: "Välj först en hållplats. Filtret gäller kommande avgångar som är tillgängliga för hållplatsen.",
-    clearTimeFilter: "Rensa tider",
-    noDeparturesInWindow: "Inga kommande avgångar under den här tiden.",
-    sourceCredit: "Trafikdata: Fölis öppna data (CC BY 4.0). Väder: Open-Meteo. Trafikljus: OpenStreetMap-bidragsgivare / Overpass API.",
-    estimateDisclaimer: "Tidtabellen och Fölis GPS-baserade liveprognos visas sida vid sida. Vår ungefärliga uppskattning väger även in GPS-hastighet, Fölis trafikstockningsdata, väder, ungefärliga OpenStreetMap-trafikljus och tidigare faktiska ankomster som sparats på enheten.",
-    scheduledTime: "Tidtabell", liveTime: "Fölis liveprognos", smartTime: "Vår dynamiska uppskattning", estimateFactors: "Uppskattningens faktorer",
-    busSpeed: "GPS-hastighet", traffic: "Trafik", trafficHeavy: "Föli rapporterar trafikstockning (+2 min)", trafficNormal: "Ingen trafikstockning rapporterad",
-    signalCount: "Trafikljus på sträckan", signalUnavailable: "Trafikljusdata saknas", weatherFactor: "Väder", historyFactor: "Tidigare observerade ankomster",
-    todayAverage: "Dagens medelvärde", previousDaysAverage: "Föregående dagars medelvärde", observedArrivals: "observerade ankomster",
-    noTodayHistory: "Inga faktiska ankomster observerade ännu i dag.", noPreviousHistory: "Inga observationer från tidigare dagar ännu.",
-    earlyBy: "tidig", lateBy: "sen", onTimeBy: "i tid", historyLocalNote: "Inlärningen sparas endast i den här webbläsaren och enheten. Dagens observationer nollställs vid midnatt i Helsingfors; dagssammanfattningar sparas i 30 dagar.",
-    estimateModelNote: "Hastigheten beräknas från upprepade GPS-observationer. Trafikstockning kommer från Fölis realtidsdata. Trafikljus och väder är ungefärliga faktorer.",
-    noLiveEstimate: "Ingen liveprognos tillgänglig", collectHistory: "Observerade ankomster bygger upp din dagliga uppskattning över tid.",
-    speedUnavailable: "väntar på GPS-hastighet", minuteValue: "min", signalSource: "OpenStreetMap (Overpass API)", weatherBuffer: "vädermarginal", congestionBuffer: "trafikmarginal",
-    previousArrivalAdjustment: "Justering från tidigare ankomster", vsTimetable: "jämfört med tidtabellen", historyStorageUnavailable: "Daghistoriken kunde inte sparas i den här webbläsaren."
-  });
-  const icons = {
-    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/>',
-    route: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h4a4 4 0 0 0 4-4V10a4 4 0 0 1 4-4"/>',
-    map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>',
-    spark: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m19 14 .9 2.4L22 17l-2.1.7L19 20l-.8-2.3L16 17l2.2-.6z"/>',
-    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>',
-    pin: '<path d="M20 10c0 5-8 11-8 11s-8-6-8-11a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
-    search: '<circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/>',
-    refresh: '<path d="M20 7v5h-5"/><path d="M19 12a7 7 0 1 1-2-5l3 5"/>',
-    locate: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>',
-    bus: '<path d="M5 17h14l1.5 2v1H3.5v-1zM6 17V6.5A2.5 2.5 0 0 1 8.5 4h7A2.5 2.5 0 0 1 18 6.5V17M6 11h12M6 8h12"/><circle cx="7" cy="19" r="1"/><circle cx="17" cy="19" r="1"/>',
-    chevron: '<path d="m9 18 6-6-6-6"/>',
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>'
-  };
+  const SIGNAL_CACHE_TTL = APP_CONFIG.trafficSignalCacheTtlMs;
+  const SIGNAL_ENDPOINT = APP_CONFIG.trafficSignalApiUrl;
   const state = {
     lang: loadLanguage(),
     searchMode: "stop",
@@ -175,11 +23,17 @@
     history: loadHistory(), historyAvailable: true, vehiclePositions: new Map(), vehicleSpeeds: new Map(),
     signalCounts: new Map(), signalLookups: new Map(), signalFailures: new Map(), estimateData: null,
     selectedEstimateStop: null, map: null, markers: new Map(), mapReady: false,
-    userLocation: null, refreshing: false, lastFavoriteAlert: "", currentView: "departures", activeModalStop: null
+    userLocation: null, refreshing: false, lastFavoriteAlert: "", currentView: "departures", activeModalStop: null,
+    lastLiveRefresh: 0
   };
   let toastTimer;
   let refreshTimer;
+  let quickMapRefreshTimer;
+  let mapFilterRefreshTimer;
   let dailyTimer;
+  let settingsController;
+  let mapController;
+  let apiHealth = "healthy";
   let displayedDateKey = helsinkiDateKey();
 
   function t(key) { return translations[state.lang][key] || translations.en[key] || key; }
@@ -338,12 +192,14 @@
     });
     document.querySelectorAll("[data-search-mode]").forEach((tab) => tab.classList.toggle("active", tab.dataset.searchMode === state.searchMode));
     renderIcons();
+    if (settingsController) settingsController.refreshLanguage();
     renderWeather();
     renderNearby();
     renderQuickFavorites();
     renderFavoritePage();
     renderRoutes(document.getElementById("route-search").value);
     renderMapMarkers();
+    if (apiHealth !== "healthy") updateApiHealth(apiHealth);
     renderEstimate();
   }
   function restoreRouteTimetable(routeId, stopId) {
@@ -363,44 +219,24 @@
     const options = { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Helsinki" };
     document.getElementById("today-label").textContent = new Intl.DateTimeFormat(state.lang, options).format(new Date());
   }
+  function updateApiHealth(status) {
+    apiHealth = status;
+    const banner = document.getElementById("api-status-banner");
+    if (status === "healthy") {
+      banner.hidden = true;
+      return;
+    }
+    const degraded = status === "degraded";
+    document.getElementById("api-status-title").textContent = t(degraded ? "apiDegradedTitle" : "apiProblemTitle");
+    document.getElementById("api-status-message").textContent = t(degraded ? "apiDegradedMessage" : "apiProblemMessage");
+    banner.hidden = false;
+  }
+  const apiClient = createApiClient(updateApiHealth);
   function apiFetch(url, options) {
-    const cacheKey = CACHE_PREFIX + url;
-    const now = Date.now();
-    let cached = null;
-    try {
-      cached = localStorage.getItem(cacheKey);
-    } catch (error) {
-      console.warn("Could not read the local API cache; fetching fresh data.", error);
-    }
-    if (!(options && options.noCache) && cached) {
-      try {
-        const entry = JSON.parse(cached);
-        if (entry.time && now - entry.time < CACHE_TTL) return Promise.resolve(entry.value);
-      } catch (error) {
-        console.warn("Discarding an invalid local API cache entry.", error);
-        try { localStorage.removeItem(cacheKey); } catch (removeError) { console.warn("Could not remove the invalid local API cache entry.", removeError); }
-      }
-    }
-    return fetch(url, { signal: AbortSignal.timeout(18000), cache: "default" }).then((response) => {
-      if (!response.ok) throw new Error(`Request failed (${response.status}): ${url}`);
-      return response.json();
-    }).then((value) => {
-      if (!(options && options.noCache)) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({ time: now, value }));
-        } catch (error) {
-          console.warn("Local cache is full; continuing without this cached response.", error);
-        }
-      }
-      return value;
-    });
+    return apiClient.fetchJson(url, options);
   }
   function weatherFetch(lat, lon) {
-    const url = `${WEATHER}?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,precipitation,weather_code,wind_speed_10m&timezone=Europe%2FHelsinki`;
-    return fetch(url, { signal: AbortSignal.timeout(12000) }).then((response) => {
-      if (!response.ok) throw new Error(`Weather request failed (${response.status})`);
-      return response.json();
-    }).then((data) => {
+    return fetchWeather(lat, lon).then((data) => {
       state.weather = data.current || null;
       renderWeather();
       renderEstimate();
@@ -453,18 +289,6 @@
       }
     }
   }
-  function normalizeStops(data) {
-    if (Array.isArray(data)) return data;
-    if (data && typeof data === "object") return Object.keys(data).map((id) => Object.assign({ stop_id: id }, data[id]));
-    return [];
-  }
-  function normalizeVehicles(data) {
-    const result = data && data.result;
-    const vehicles = result && result.vehicles;
-    if (!vehicles || typeof vehicles !== "object") return [];
-    return Object.entries(vehicles).map(([id, vehicle]) => Object.assign({ vehicleId: id }, vehicle))
-      .filter((vehicle) => Number.isFinite(Number(vehicle.latitude)) && Number.isFinite(Number(vehicle.longitude)));
-  }
   function stopId(stop) { return String(stop.stop_id != null ? stop.stop_id : stop.id); }
   function stopName(stop) { return stop.stop_name || stop.name || `Stop ${stopId(stop)}`; }
   function routeLabel(route) { return String(route.route_short_name || route.route_id || "—"); }
@@ -491,6 +315,7 @@
     renderFavoritePage();
     renderNearby();
     renderRoutes(document.getElementById("route-search").value);
+    renderMapMarkers();
     document.getElementById("favorite-count").textContent = state.favorites.length;
     showToast(t(exists ? "favoriteRemoved" : "favoriteSaved"), "success");
     if (kind === "stop") checkFavoriteArrivals();
@@ -502,7 +327,7 @@
     toastTimer = setTimeout(() => { region.innerHTML = ""; }, 3800);
   }
   function switchView(name) {
-    const valid = ["departures", "lines", "map", "estimator", "favorites"].includes(name) ? name : "departures";
+    const valid = ["departures", "lines", "map", "estimator", "favorites", "settings"].includes(name) ? name : "departures";
     state.currentView = valid;
     document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${valid}`));
     document.querySelectorAll("[data-view]").forEach((button) => {
@@ -518,6 +343,8 @@
         initializeMap();
         if (state.map) state.map.invalidateSize();
         renderMapMarkers();
+        if (state.userLocation && mapController) mapController.focusUser();
+        if (document.getElementById("map-filter").value.trim()) refreshLiveData();
       }, 80);
     }
     if (valid === "estimator" && state.estimateData) renderEstimateResults(state.estimateData.stop, state.estimateData.data);
@@ -763,6 +590,8 @@
     state.selectedEstimateStop = stop;
     const input = document.getElementById("estimate-search");
     input.value = stopName(stop);
+    document.getElementById("estimate-stop-picker").hidden = true;
+    document.getElementById("estimate-choose-stop-label").textContent = t("changeStop");
     document.getElementById("clear-estimate-search").hidden = false;
     document.getElementById("estimate-results").hidden = true;
     const selected = document.getElementById("estimate-selected");
@@ -947,7 +776,7 @@
     const east = Math.max(lon, stopLon) + padding;
     const query = `[out:json][timeout:8];node["highway"="traffic_signals"](${south.toFixed(5)},${west.toFixed(5)},${north.toFixed(5)},${east.toFixed(5)});out body;`;
     const lookup = (async () => {
-      const response = await fetch(`${SIGNAL_ENDPOINT}?data=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(10000) });
+      const response = await fetch(`${SIGNAL_ENDPOINT}?data=${encodeURIComponent(query)}`, { signal: AbortSignal.timeout(APP_CONFIG.trafficSignalRequestTimeoutMs) });
       if (!response.ok) throw new Error(`OpenStreetMap Overpass request failed (${response.status}).`);
       const data = await response.json();
       if (!Array.isArray(data.elements)) throw new Error("OpenStreetMap Overpass returned an invalid signal response.");
@@ -976,24 +805,33 @@
       state.signalLookups.delete(key);
     }
   }
-  function distancesFrom(lat, lon) {
+  function distancesFrom(lat, lon, limit) {
     return state.stops.filter((stop) => Number.isFinite(Number(stop.stop_lat)) && Number.isFinite(Number(stop.stop_lon)))
       .map((stop) => Object.assign({ distance: haversine(lat, lon, Number(stop.stop_lat), Number(stop.stop_lon)) }, stop))
-      .sort((a, b) => a.distance - b.distance).slice(0, 5);
+      .sort((a, b) => a.distance - b.distance).slice(0, limit || 5);
   }
   function renderNearby() {
     const list = document.getElementById("nearby-list");
     if (!list) return;
     if (!state.stops.length) return;
     const position = state.userLocation || TURKU;
-    const nearest = distancesFrom(position.lat, position.lon);
-    if (!nearest.length) {
+    const radius = settingsController ? settingsController.radiusKm() : 5;
+    const nearby = distancesFrom(position.lat, position.lon, state.stops.length).filter((stop) => stop.distance <= radius).slice(0, 5);
+    const favorites = state.favorites.filter((favorite) => favorite.kind === "stop")
+      .map((favorite) => stopById(favorite.id))
+      .filter(Boolean)
+      .map((stop) => Object.assign({
+        distance: haversine(position.lat, position.lon, Number(stop.stop_lat), Number(stop.stop_lon)),
+        favorite: true
+      }, stop));
+    const displayed = [...favorites, ...nearby.filter((stop) => !favorites.some((favorite) => stopId(favorite) === stopId(stop)))];
+    if (!displayed.length) {
       list.innerHTML = `<div class="empty-state small-empty"><strong>${escapeHtml(t("noNearby"))}</strong></div>`;
       return;
     }
-    list.innerHTML = nearest.map((stop) => {
+    list.innerHTML = displayed.map((stop) => {
       const id = stopId(stop);
-      return `<button class="nearby-row" data-nearby-id="${escapeHtml(id)}"><span class="nearby-pin">${icon("pin")}</span><span class="nearby-copy"><strong>${escapeHtml(stopName(stop))}</strong><small>${escapeHtml(id)} · ${stop.distance.toFixed(1)} km</small></span><span class="nearby-next">${icon("chevron")}</span></button>`;
+      return `<button class="nearby-row ${stop.favorite ? "favorite-nearby-row" : ""}" data-nearby-id="${escapeHtml(id)}"><span class="nearby-pin">${icon(stop.favorite ? "star" : "pin")}</span><span class="nearby-copy"><strong>${escapeHtml(stopName(stop))}</strong><small>${escapeHtml(id)} · ${stop.distance.toFixed(1)} km${stop.favorite ? ` · ${escapeHtml(t("favorites"))}` : ""}</small></span><span class="nearby-next">${icon("chevron")}</span></button>`;
     }).join("");
     list.querySelectorAll("[data-nearby-id]").forEach((button) => button.addEventListener("click", () => openStopModal(stopById(button.dataset.nearbyId))));
   }
@@ -1196,50 +1034,12 @@
       return `<div class="route-bus-row"><span class="route-bus-icon">${icon("bus")}</span><span class="route-bus-copy"><strong>${escapeHtml(destination || t("destination"))}</strong><small>${escapeHtml(vehicle.next_stoppointname || "")}</small></span><span class="route-bus-eta">${eta ? escapeHtml(relativeArrival(Number(eta))) : ""}</span></div>`;
     }).join("");
   }
-  function initializeMap() {
-    if (state.mapReady || typeof window.L === "undefined") return;
-    state.map = L.map("live-map", { zoomControl: true, scrollWheelZoom: false }).setView([TURKU.lat, TURKU.lon], 12);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(state.map);
-    state.mapReady = true;
-    renderMapMarkers();
-  }
-  function renderMapMarkers() {
-    if (!state.mapReady || !state.map) return;
-    const filter = (document.getElementById("map-filter").value || "").trim().toLocaleLowerCase();
-    const active = new Set();
-    state.vehicles.forEach((vehicle) => {
-      if (filter && !String(vehicle.publishedlinename || vehicle.lineref || "").toLocaleLowerCase().includes(filter)) return;
-      const id = String(vehicle.vehicleId);
-      const route = routeById(vehicle.lineref);
-      const label = vehicle.publishedlinename || route && routeLabel(route) || vehicle.lineref || "·";
-      active.add(id);
-      const color = route ? routeColor(route) : "#176d59";
-      const html = `<div class="bus-marker" style="--marker-color:${color}">${icon("bus")}<span>${escapeHtml(label)}</span></div>`;
-      const coords = [Number(vehicle.latitude), Number(vehicle.longitude)];
-      const existing = state.markers.get(id);
-      const popup = `<div class="map-popup"><strong>${escapeHtml(t("line"))} ${escapeHtml(label)}</strong><span>${escapeHtml(vehicle.destinationdisplay || vehicle.destinationname || "")}</span><small>${escapeHtml(vehicle.next_stoppointname || "")}${vehicle.next_expectedarrivaltime ? ` · ${escapeHtml(relativeArrival(Number(vehicle.next_expectedarrivaltime)))}` : ""}</small></div>`;
-      if (existing) {
-        existing.setLatLng(coords);
-        existing.setIcon(L.divIcon({ className: "bus-marker-wrap", html, iconSize: [68, 34], iconAnchor: [30, 17] }));
-        existing.setPopupContent(popup);
-      } else {
-        const marker = L.marker(coords, { icon: L.divIcon({ className: "bus-marker-wrap", html, iconSize: [68, 34], iconAnchor: [30, 17] }) }).addTo(state.map);
-        marker.bindPopup(popup);
-        state.markers.set(id, marker);
-      }
-    });
-    state.markers.forEach((marker, id) => {
-      if (!active.has(id)) { state.map.removeLayer(marker); state.markers.delete(id); }
-    });
-    document.getElementById("map-loading").hidden = true;
-    const now = new Intl.DateTimeFormat(state.lang, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Helsinki" }).format(new Date());
-    document.getElementById("map-updated").textContent = `${t("updated")} ${now} · ${state.vehicles.filter((vehicle) => !filter || String(vehicle.lineref).toLowerCase().includes(filter)).length}`;
-  }
+  function initializeMap() { if (mapController) mapController.initialize(); }
+  function renderMapMarkers() { if (mapController) mapController.render(); }
   async function refreshLiveData() {
     if (state.refreshing) return;
     state.refreshing = true;
+    state.lastLiveRefresh = Date.now();
     try {
       const data = await apiFetch(`${API}/siri/vm`, { noCache: true });
       state.vehicles = normalizeVehicles(data);
@@ -1328,6 +1128,17 @@
     bindSearch("main-search", "search-results", state.searchMode, "clear-search");
     bindSearch("route-search", "route-results", "route", "clear-route-search");
     bindSearch("estimate-search", "estimate-results", "stop", "clear-estimate-search");
+    document.getElementById("estimate-choose-stop").addEventListener("click", () => {
+      const picker = document.getElementById("estimate-stop-picker");
+      picker.hidden = !picker.hidden;
+      if (!picker.hidden) {
+        const input = document.getElementById("estimate-search");
+        input.value = "";
+        document.getElementById("estimate-results").hidden = true;
+        document.getElementById("clear-estimate-search").hidden = true;
+        input.focus();
+      }
+    });
     document.querySelectorAll("[data-search-mode]").forEach((button) => button.addEventListener("click", () => {
       state.searchMode = button.dataset.searchMode;
       document.querySelectorAll(".search-tab").forEach((tab) => {
@@ -1367,7 +1178,17 @@
       else showToast(t("locateDenied"), "error");
     });
     document.getElementById("map-refresh").addEventListener("click", refresh);
-    document.getElementById("map-filter").addEventListener("input", renderMapMarkers);
+    document.getElementById("api-retry-button").addEventListener("click", refresh);
+    document.getElementById("map-filter").addEventListener("input", () => {
+      renderMapMarkers();
+      clearTimeout(mapFilterRefreshTimer);
+      if (state.currentView === "map" && document.getElementById("map-filter").value.trim()) {
+        mapFilterRefreshTimer = setTimeout(() => {
+          if (Date.now() - state.lastLiveRefresh >= APP_CONFIG.selectedLineRefreshIntervalMs) refreshLiveData();
+        }, APP_CONFIG.mapFilterDebounceMs);
+      }
+    });
+    document.getElementById("map-locate-button").addEventListener("click", requestLocation);
     document.getElementById("route-search").addEventListener("input", (event) => {
       renderRoutes(event.target.value);
       document.getElementById("route-detail").hidden = true;
@@ -1388,19 +1209,36 @@
     document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !document.getElementById("modal-backdrop").hidden) closeStopModal(); });
   }
   function requestLocation() {
+    if (settingsController && !settingsController.isLocationEnabled()) {
+      settingsController.setLocationStatus("locationDisabled");
+      showToast(t("locationDisabled"), "error");
+      return;
+    }
     if (!navigator.geolocation) {
+      if (settingsController) settingsController.setLocationStatus("locateDenied");
       showToast(t("locateDenied"), "error");
       return;
     }
+    if (settingsController) settingsController.setLocationStatus("locating");
     navigator.geolocation.getCurrentPosition((position) => {
       state.userLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
       renderNearby();
+      renderMapMarkers();
+      if (mapController) mapController.focusUser();
+      if (settingsController) settingsController.setLocationStatus("locationFound");
       weatherFetch(position.coords.latitude, position.coords.longitude);
-      showToast(t("nearbyStops"), "success");
+      showToast(t("locationFound"), "success");
     }, (error) => {
       console.warn("Could not get the user's location.", error);
+      if (settingsController) settingsController.setLocationStatus("locateDenied");
       showToast(t("locateDenied"), "error");
-    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+    }, { enableHighAccuracy: false, timeout: APP_CONFIG.locationRequestTimeoutMs, maximumAge: APP_CONFIG.locationMaximumAgeMs });
+  }
+  function disableLocation() {
+    state.userLocation = null;
+    if (mapController) mapController.clearUserLocation();
+    renderNearby();
+    weatherFetch(TURKU.lat, TURKU.lon);
   }
   function initializeMainSearch() {
     const input = document.getElementById("main-search");
@@ -1510,7 +1348,24 @@
     return false;
   }
   async function init() {
+    document.querySelectorAll("[data-app-version]").forEach((node) => {
+      node.textContent = `v${APP_CONFIG.version}`;
+    });
+    document.querySelectorAll("[data-report-issue]").forEach((link) => {
+      link.href = APP_CONFIG.issueUrl;
+    });
     renderIcons();
+    settingsController = initializeSettings({
+      t,
+      onLocate: requestLocation,
+      onLocationDisabled: disableLocation,
+      onRadiusChange: () => { renderNearby(); renderMapMarkers(); }
+    });
+    mapController = createMapController({
+      state, t, icon, escapeHtml, routeById, routeLabel, routeColor, relativeArrival,
+      getRadiusKm: () => settingsController.radiusKm(),
+      onStopClick: openStopModal
+    });
     bindEvents();
     initializeMainSearch();
     initializeModal();
@@ -1522,7 +1377,13 @@
     await refreshLiveData();
     await staticLoad;
     if (state.lang !== "fi") applyLanguage();
-    refreshTimer = setInterval(refreshLiveData, 30000);
+    refreshTimer = setInterval(() => {
+      if (Date.now() - state.lastLiveRefresh >= APP_CONFIG.normalRefreshIntervalMs) refreshLiveData();
+    }, APP_CONFIG.refreshIntervalCheckMs);
+    quickMapRefreshTimer = setInterval(() => {
+      const selectedLine = document.getElementById("map-filter").value.trim();
+      if (state.currentView === "map" && selectedLine && Date.now() - state.lastLiveRefresh >= APP_CONFIG.selectedLineRefreshIntervalMs) refreshLiveData();
+    }, APP_CONFIG.refreshIntervalCheckMs);
     dailyTimer = setInterval(() => {
       ensureDailyHistory();
       const currentDate = helsinkiDateKey();
@@ -1531,11 +1392,13 @@
         updateToday();
         if (state.estimateData) renderEstimateResults(state.estimateData.stop, state.estimateData.data);
       }
-    }, 30000);
+    }, APP_CONFIG.normalRefreshIntervalMs);
     window.addEventListener("beforeunload", () => {
       clearInterval(refreshTimer);
+      clearInterval(quickMapRefreshTimer);
       clearInterval(dailyTimer);
       clearTimeout(toastTimer);
+      clearTimeout(mapFilterRefreshTimer);
     });
   }
   if (initializeTerms()) startApp(false);
